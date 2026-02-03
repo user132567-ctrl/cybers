@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>☣ Cyber Chat ☣</title>
+  <style>
+    body { margin:0; background:black; color:#a00; font-family:'Courier New', monospace; overflow:hidden; }
+    header { text-align:center; font-size:2em; padding:20px; text-shadow:0 0 10px #a00; z-index:2; position:relative; }
+    #login, main { display:flex; flex-direction:column; align-items:center; justify-content:center; height:80vh; z-index:2; position:relative; }
+    #login form { display:flex; flex-direction:column; gap:12px; background:rgba(17,17,17,0.8); padding:20px; border:2px solid #a00; box-shadow:0 0 20px #600; }
+    #login input, #login button { margin-top:10px; padding:8px; background:#000; border:1px solid #a00; color:#a00; }
+    #chatbox { width:90%; height:300px; overflow-y:auto; background:rgba(17,17,17,0.8); border:1px solid #a00; padding:10px; margin-bottom:10px; color:#ddd; }
+    .input-area { display:flex; justify-content:center; gap:10px; width:100%; padding:10px; background:rgba(17,17,17,0.8); }
+    canvas { position:fixed; top:0; left:0; z-index:1; }
+  </style>
+</head>
+<body>
+  <header>☣ Cyber Chat ☣</header>
+
+  <!-- Tela de Login -->
+  <div id="login">
+    <form>
+      <input type="text" id="usuario" placeholder="Digite seu usuário">
+      <button type="button" id="entrar">Entrar</button>
+    </form>
+  </div>
+
+  <!-- Área do Chat -->
+  <main style="display:none;">
+    <h3>Sala: Principal</h3>
+    <div id="chatbox"></div>
+    <div class="input-area">
+      <input type="text" id="mensagem" placeholder="Digite sua mensagem...">
+      <button id="enviar">Enviar</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </main>
+
+  <canvas id="matrix"></canvas>
+
+  <script>
+    let socket; let usuario;
+    const loginDiv = document.getElementById('login');
+    const mainDiv = document.querySelector('main');
+
+    // Botão Entrar → conecta ao chat
+    document.getElementById('entrar').addEventListener('click', () => {
+      usuario = document.getElementById('usuario').value.trim();
+      if(usuario){
+        loginDiv.style.display="none"; mainDiv.style.display="flex";
+        // Conexão WebSocket sem /ws, compatível com seu server.js
+        socket = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host);
+        
+        socket.onopen = () => { socket.send(JSON.stringify({user:"Sistema", text:"⚡ "+usuario+" entrou na sala ⚡"})); };
+        socket.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+          const p = document.createElement("p");
+          p.textContent = msg.user+": "+msg.text;
+          document.getElementById("chatbox").appendChild(p);
+          document.getElementById("chatbox").scrollTop = chatbox.scrollHeight;
+        };
+      } else { alert("Digite um usuário para entrar."); }
+    });
+
+    // Enviar mensagem
+    document.getElementById('enviar').addEventListener('click', () => {
+      const msg = document.getElementById('mensagem').value.trim();
+      if(msg && socket){ socket.send(JSON.stringify({user:usuario, text:msg})); document.getElementById('mensagem').value=""; }
+    });
+
+    function logout(){ if(socket) socket.close(); mainDiv.style.display="none"; loginDiv.style.display="flex"; }
+
+    // Matrix vermelho
+    const canvas=document.getElementById("matrix"); const ctx=canvas.getContext("2d");
+    canvas.height=window.innerHeight; canvas.width=window.innerWidth;
+    const letters="01ABCDEFGHIJKLMNOPQRSTUVWXYZ"; const fontSize=16; const columns=canvas.width/fontSize;
+    const drops=Array(Math.floor(columns)).fill(1);
+    function draw(){ ctx.fillStyle="rgba(0,0,0,0.05)"; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle="#a00"; ctx.font=fontSize+"px monospace";
+      for(let i=0;i<drops.length;i++){ const text=letters[Math.floor(Math.random()*letters.length)];
+        ctx.fillText(text,i*fontSize,drops[i]*fontSize);
+        if(drops[i]*fontSize>canvas.height && Math.random()>0.95) drops[i]=0; drops[i]++; } }
+    setInterval(draw,50);
+  </script>
+</body>
+</html>
